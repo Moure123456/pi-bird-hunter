@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صياد الطيور - Pi Network Game</title>
+    <title>صياد الطيور الاحترافي - Pi Network</title>
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
             overflow: hidden;
-            background: #87CEEB;
+            background: #87CEEB; /* لون سماء بديل في حال لم تفتح الصورة */
             font-family: Arial, sans-serif;
             user-select: none;
         }
         #gameCanvas {
             display: block;
-            background: linear-gradient(to bottom, #87CEEB, #e0f6ff);
         }
-        /* لوحة معلومات اللعبة أعلى الشاشة */
+        /* لوحة معلومات اللعبة أعلى الشاشة - تصميم احترافي */
         #ui {
             position: absolute;
             top: 15px;
@@ -26,247 +25,25 @@
             font-size: 18px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.4);
-            padding: 10px 15px;
-            border-radius: 10px;
+            background: rgba(0,0,0,0.5); /* خلفية نصف شفافة */
+            padding: 12px 18px;
+            border-radius: 12px;
+            z-index: 5;
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        /* أزرار التحكم في الركن الأيمن السفلي */
+        #coinsValue { color: #ffd700; } /* لون ذهبي للعملات */
+        #timeMode { font-size: 14px; color: #a0f0a0; }
+
+        /* أزرار التحكم في الركن الأيمن السفلي - ألوان مميزة */
         #controls {
             position: absolute;
             bottom: 25px;
             right: 25px;
             display: flex;
             gap: 15px;
-            align-items: center;
+            z-index: 5;
         }
         .btn {
             width: 75px;
             height: 75px;
-            background: rgba(255, 140, 0, 0.85);
-            border: 3px solid #fff;
-            border-radius: 50%;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-        }
-        .btn:active {
-            transform: scale(0.92);
-            background: rgba(200, 100, 0, 0.95);
-        }
-        #zoomBtn.active {
-            background: rgba(0, 180, 0, 0.9);
-        }
-        /* واجهة المتجر المنبثقة عند بلوغ 50 عملة */
-        #shopModal {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.85);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            border: 2px solid #FF8C00;
-            width: 85%;
-            max-width: 350px;
-            z-index: 10;
-        }
-        #shopModal h2 { color: #FF8C00; margin-top: 0; }
-        .shop-item {
-            background: #333;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 1px solid #555;
-        }
-        .shop-item:hover { background: #444; border-color: #FF8C00; }
-        #closeShop {
-            background: #FF8C00;
-            border: none;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 5px;
-            font-weight: bold;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="ui">
-        العملات: <span id="coins">0</span> | المستوى: <span id="level">1</span><br>
-        <span id="timeMode" style="font-size: 14px; color: #ffd700;">وضع النهار (سماء صافية)</span>
-    </div>
-
-    <canvas id="gameCanvas"></canvas>
-
-    <!-- أزرار التحكم المطلوبة في الركن الأيمن السفلي -->
-    <div id="controls">
-        <div class="btn" id="zoomBtn">زوم</div>
-        <div class="btn" id="shootBtn">إطلاق</div>
-    </div>
-
-    <!-- متجر البنادق والألوان -->
-    <div id="shopModal">
-        <h2>متجر البنادق</h2>
-        <p>لقد جمعت 50 عملة واجتزت المستوى!</p>
-        <div class="shop-item" onclick="changeRifle('ذهبية', '#FFD700')">بندقية ذهبية ملكية</div>
-        <div class="shop-item" onclick="changeRifle('مموهة', '#556B2F')">بندقية صيد مموهة</div>
-        <button id="closeShop" onclick="closeShopModal()">متابعة اللعب</button>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        let coins = 0;
-        let level = 1;
-        let isZoomed = false;
-        let rifleColor = '#333'; 
-        let rifleName = 'عادية';
-        let isNight = false;
-
-        let bird = { x: -50, y: 100, speed: 3, alive: true, hit: false };
-        let dogState = 'wait'; 
-        let dogX = 150;
-
-        function resetBird() {
-            bird.x = -50;
-            bird.y = Math.random() * (canvas.height / 2);
-            bird.alive = true;
-            bird.hit = false;
-        }
-        resetBird();
-
-        // زر إطلاق النار
-        document.getElementById('shootBtn').addEventListener('click', () => {
-            if (bird.alive && !bird.hit) {
-                bird.hit = true;
-                bird.alive = false;
-                dogState = 'runToBird';
-            }
-        });
-
-        // زر الزوم (تقريب الهدف)
-        const zoomBtn = document.getElementById('zoomBtn');
-        zoomBtn.addEventListener('click', () => {
-            isZoomed = !isZoomed;
-            zoomBtn.classList.toggle('active', isZoomed);
-        });
-
-        function openShop() {
-            document.getElementById('shopModal').style.display = 'block';
-        }
-
-        function closeShopModal() {
-            document.getElementById('shopModal').style.display = 'none';
-            coins = 0; 
-            level++;
-            isNight = !isNight; // تبديل حالة النهار والليل لكل مستوى جديد
-            document.getElementById('timeMode').innerText = isNight ? 'وضع الليل (مع كشاف البندقية)' : 'وضع النهار (سماء صافية)';
-            updateUI();
-        }
-
-        function changeRifle(name, color) {
-            rifleName = name;
-            rifleColor = color;
-            alert('تم اختيار: ' + name);
-        }
-
-        function updateUI() {
-            document.getElementById('coins').innerText = coins;
-            document.getElementById('level').innerText = level;
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // بيئة النهار والليل
-            if (isNight) {
-                ctx.fillStyle = '#0b1329';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // كشاف البندقية ليلاً
-                ctx.fillStyle = 'rgba(255, 255, 200, 0.2)';
-                ctx.beginPath();
-                ctx.arc(130, canvas.height - 150, isZoomed ? 250 : 180, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                ctx.fillStyle = '#87CEEB';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            }
-
-            // الأرضية
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-
-            // حركة الطائر
-            if (bird.alive) {
-                bird.x += bird.speed;
-                if (bird.x > canvas.width + 50) resetBird();
-            } else if (bird.hit) {
-                bird.y += 4; 
-            }
-
-            // رسم الطائر
-            ctx.fillStyle = isNight ? '#ff4500' : '#4169E1';
-            ctx.beginPath();
-            ctx.arc(bird.x, bird.y, isZoomed ? 22 : 15, 0, Math.PI * 2);
-            ctx.fill();
-
-            // رسم الصياد (تي شيرت برتقالي وشورت أسود)
-            ctx.fillStyle = '#FF8C00'; 
-            ctx.fillRect(100, canvas.height - 180, 40, 60);
-            ctx.fillStyle = '#000000'; 
-            ctx.fillRect(100, canvas.height - 120, 40, 30);
-
-            // البندقية
-            ctx.fillStyle = rifleColor;
-            ctx.fillRect(110, canvas.height - 160, 50, 10);
-
-            // حركة الكلب
-            if (dogState === 'runToBird') {
-                dogX += 3;
-                if (dogX >= bird.x) {
-                    dogState = 'returnToHunter';
-                }
-            } else if (dogState === 'returnToHunter') {
-                dogX -= 3;
-                if (dogX <= 150) {
-                    dogState = 'wait';
-                    coins += 5;
-                    updateUI();
-                    resetBird();
-                    if (coins >= 50) {
-                        openShop();
-                    }
-                }
-            }
-
-            // رسم السلة والكلب
-            ctx.fillStyle = '#8B4513'; 
-            ctx.fillRect(60, canvas.height - 120, 35, 30);
-
-            ctx.fillStyle = '#D2B48C'; 
-            ctx.fillRect(dogX, canvas.height - 110, 30, 20);
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
-
+            background: linear-gradient(135deg, #FF8C00, #ff6a00); /*
